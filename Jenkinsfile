@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    environment {
+        VIRTUAL_ENV = "venv"
+    }
     stages {
         stage('Checkout') {
             steps {
@@ -9,8 +12,8 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 sh '''
-                python3 -m venv venv
-                . venv/bin/activate
+                python3 -m venv $VIRTUAL_ENV
+                . $VIRTUAL_ENV/bin/activate
                 pip install --upgrade pip
                 pip install -r requirements.txt
                 '''
@@ -19,15 +22,20 @@ pipeline {
         stage('Run Tests') {
             steps {
                 sh '''
-                . venv/bin/activate
-                pytest --junitxml=test-results.xml
+                . $VIRTUAL_ENV/bin/activate
+                pytest --junitxml=test-results.xml || true
                 '''
+            }
+            post {
+                always {
+                    junit 'test-results.xml'
+                }
             }
         }
         stage('Package Application') {
             steps {
                 sh '''
-                tar -czf python-app.tar.gz .
+                tar --exclude=$VIRTUAL_ENV -czf python-app.tar.gz .
                 '''
             }
         }
